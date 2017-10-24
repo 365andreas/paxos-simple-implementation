@@ -1,0 +1,8 @@
+flags: {}
+nix: null
+packages:
+- .
+extra-deps:
+- distributed-process-0.7.3
+# - network-transport-0.5.1
+resolver: nightly-2017-07-12

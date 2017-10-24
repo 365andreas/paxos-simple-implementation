@@ -1,0 +1,33 @@
+name:                paxos-cloud
+version:             0.1.0.0
+license:             BSD3
+license-file:        LICENSE
+author:              Andreas Triantafyllos
+maintainer:          andreas.triantafyllos@iohk.io
+copyright:           (c) 2017 Andreas Triantafyllos
+category:            Training
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Acceptor
+                     , Consumer
+                     , Counter
+                     , Master
+                     , Messages
+  build-depends:       base >= 4.7 && < 5
+                     , binary
+                     , distributed-process
+                     , network-transport-tcp
+  ghc-options:         -Wall
+  default-language:    Haskell2010
+
+executable paxos
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  build-depends:       base
+                     , paxos-cloud
+  ghc-options:         -Wall
+  default-language:    Haskell2010
