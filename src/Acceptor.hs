@@ -4,7 +4,10 @@ module Acceptor where
 
 import Messages
 
-import Control.Distributed.Process (say, match, send, liftIO, receiveWait, Process, ProcessId)
+import Control.Distributed.Process (
+    say, match, send, liftIO, receiveWait, getSelfPid, terminate,
+    Process, ProcessId
+    )
 import Control.Monad (forever, void, when)
 import Data.IORef
 
@@ -16,11 +19,10 @@ data ServerInfo =
         , tStoreRef :: IORef TicketId
         }
 
-
 logMsg :: String -> Process ()
 logMsg msg = say $ "Message came: " ++ msg
 
--- | Acceptor serving a phase-1 client
+-- | Acceptor serving a phase-1 client.
 servePrepare :: ServerInfo -> Prepare -> Process ()
 servePrepare ServerInfo{..} (Prepare t proposerPid) = do
 
@@ -32,9 +34,10 @@ servePrepare ServerInfo{..} (Prepare t proposerPid) = do
         -- T_max = t (line 4)
         liftIO $ writeIORef tMaxRef t
         -- answer with ok(T_store, C) (line 5)
-        send proposerPid $ PromiseOk tStore cmd
+        self <- getSelfPid
+        send proposerPid $ PromiseOk tStore cmd self
 
--- | Acceptor serving a phase-2 client
+-- | Acceptor serving a phase-2 client.
 servePropose :: ServerInfo -> Propose -> Process ()
 servePropose ServerInfo{..} (Propose t cmd' proposerPid) = do
 
@@ -47,15 +50,12 @@ servePropose ServerInfo{..} (Propose t cmd' proposerPid) = do
         -- answer with success (line 17)
         send proposerPid ProposalSuccess
 
--- | Acceptor serving an 'Execute' message
+-- | Acceptor serving an 'Execute' message.
 serveExecute :: ServerInfo -> Execute -> Process ()
 serveExecute ServerInfo{..} (Execute cmdExec) = do
-    acceptorSay $ "Received 'Execute " ++ show cmdExec ++ "' message"
+    acceptorSay $ "Received 'Execute " ++ show cmdExec ++ "'"
     send masterPid $ Executed cmdExec
-
-    liftIO $ writeIORef tMaxRef     0
-    liftIO $ writeIORef tStoreRef   0
-    liftIO $ writeIORef cmdRef    (-1)
+    terminate
 
 -- | Acceptor waits for 'Prepare', 'Propose' or
 -- 'Execute' messages and serves them.

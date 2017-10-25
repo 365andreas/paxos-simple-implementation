@@ -23,8 +23,14 @@ data Prepare = Prepare TicketId ProcessId
 
 -- The promise-ok message is the one called ok in the
 -- book, and sent as a response to prepare in line 5.
-data PromiseOk = PromiseOk TicketId Command
-    deriving (Generic, Typeable, Binary, Show)
+data PromiseOk = PromiseOk TicketId Command ProcessId
+    deriving (Generic, Typeable, Binary, Show)--, Eq, Ord)
+
+instance Eq PromiseOk where
+    (==) (PromiseOk a _ _) (PromiseOk b _ _) = (==) a b
+
+instance Ord PromiseOk where
+    compare (PromiseOk a _ _) (PromiseOk b _ _) = compare a b
 
 -- The promise-not-ok message is mentioned in the second
 -- remark as a negative message the acceptor can send to the
@@ -66,7 +72,7 @@ second = 1000000
 -- | Helper function for declaring that the master is
 -- logging.
 masterSay :: String -> Process ()
-masterSay msg = say $ "master : " ++ msg
+masterSay msg = say $ "master   : " ++ msg
 
 -- | Helper function for declaring that an acceptor
 -- is logging.
