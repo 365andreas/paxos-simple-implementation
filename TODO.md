@@ -48,5 +48,3 @@ with timeouts but without negative responses, and one
 that in addition works with timeouts and negative responses.
 In the latter, due to the reliability of a local network,
 you'll probably never hit the timeouts though.
-
-replace with record and update it with function Record -> Record
