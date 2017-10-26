@@ -1,5 +1,3 @@
--- {-# LANGUAGE RecordWildCards #-}
-
 module Proposer where
 
 import Messages
@@ -10,7 +8,7 @@ import Control.Distributed.Process (
     receiveTimeout, kill, Process, ProcessId
     )
 import Control.Monad (forM_, replicateM)
-import Data.Maybe (isJust, catMaybes)
+import Data.Maybe (catMaybes)
 import System.Random (randomRIO)
 
 
@@ -18,6 +16,9 @@ isPromiseOk :: Promise -> Bool
 isPromiseOk PromiseOk{} =  True
 isPromiseOk           _ = False
 
+-- | Splits a 'Maybe' 'Promise' list to two lists, from
+-- which the first contains 'PromiseOk' messages and the
+-- second 'PromiseNotOk' messages.
 splitOkNotOk :: [Maybe Promise] -> ([Promise], [Promise])
 splitOkNotOk list =
     let list' = catMaybes list in
@@ -27,6 +28,9 @@ isProposalSuccess :: Proposal -> Bool
 isProposalSuccess ProposalSuccess =  True
 isProposalSuccess               _ = False
 
+-- | The 'catProposalSuccess' function takes a list of 'Maybe'
+-- 'Proposal's and returns a list of all the 'Just'
+-- 'ProposalSuccess' values.
 catProposalSuccess :: [Maybe Proposal] -> [Proposal]
 catProposalSuccess list =
     let list' = catMaybes list in
@@ -43,7 +47,7 @@ receivePromise = return
 receiveProposal :: Proposal -> Process Proposal
 receiveProposal = return
 
--- | Proposer ...
+-- | Proposer's main.
 propose :: [ProcessId] -> Command -> TicketId -> Process ()
 propose serverPids cmd t = do
 
@@ -57,8 +61,6 @@ propose serverPids cmd t = do
     senderPid <- spawnLocal $ sendPrepare t' self serverPids
 
     let a = length serverPids
-
-    -- receivePhase1
     answers <- replicateM a (receiveTimeout second [ match receivePromise ])
     let (listOk, listNotOk) = splitOkNotOk answers
 

@@ -6,7 +6,6 @@ import Acceptor (serve)
 import Messages
 import Proposer (propose)
 
--- import Control.Concurrent (threadDelay)
 import Control.Monad (replicateM_, replicateM, forM_)
 import Control.Distributed.Process
 import Control.Distributed.Process.Closure (mkClosure, remotable)
@@ -15,7 +14,7 @@ import Network.Transport.TCP (createTransport, defaultTCPParameters)
 
 
 serveExecuted :: Executed -> Process ()
-serveExecuted (Executed _) = return () -- masterSay $ "Received 'Executed " ++ show cmd ++ "'"
+serveExecuted (Executed _) = return ()
 
 proposeClosure :: ([ProcessId], Command, TicketId) -> Process ()
 proposeClosure (list, cmd, t) = propose list cmd t
@@ -42,7 +41,6 @@ master a p = do
         masterPid <- getSelfPid
         -- Spawn acceptors on their node
         acceptorsPids <- replicateM a $ spawn acceptorsNodeId $ $(mkClosure 'serve) masterPid
-        -- liftIO $ print acceptorsPids
 
         let zeroT = 0 :: TicketId
         -- Spawn proposers on their node

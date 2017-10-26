@@ -8,7 +8,7 @@ import Control.Distributed.Process (
     say, match, send, liftIO, receiveWait, getSelfPid, terminate,
     Process, ProcessId
     )
-import Control.Monad (forever, void, when)
+import Control.Monad (forever, void)
 import Data.IORef
 
 data ServerInfo =
@@ -37,7 +37,7 @@ servePrepare ServerInfo{..} (Prepare t proposerPid) = do
         self <- getSelfPid
         send proposerPid $ PromiseOk tStore cmd self
     else
-        -- send negative answer
+        -- send negative answer to proposer
         send proposerPid $ PromiseNotOk tMax
 
 -- | Acceptor serving a phase-2 client.
