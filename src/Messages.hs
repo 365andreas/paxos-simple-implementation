@@ -21,22 +21,37 @@ data Done = Done deriving (Generic, Typeable, Binary, Show)
 data Prepare = Prepare TicketId ProcessId
     deriving (Generic, Typeable, Binary, Show)
 
--- The promise-ok message is the one called ok in the
--- book, and sent as a response to prepare in line 5.
-data PromiseOk = PromiseOk TicketId Command ProcessId
+-- -- The promise-ok message is the one called ok in the
+-- -- book, and sent as a response to prepare in line 5.
+-- data PromiseOk = PromiseOk TicketId Command ProcessId
+--     deriving (Generic, Typeable, Binary, Show)--, Eq, Ord)
+
+-- instance Eq PromiseOk where
+--     (==) (PromiseOk a _ _) (PromiseOk b _ _) = (==) a b
+
+-- instance Ord PromiseOk where
+--     compare (PromiseOk a _ _) (PromiseOk b _ _) = compare a b
+
+-- -- The promise-not-ok message is mentioned in the second
+-- -- remark as a negative message the acceptor can send to the
+-- -- proposer in the case it cannot make a promise.
+-- newtype PromiseNotOk = PromiseNotOk TicketId
+--     deriving (Generic, Typeable, Binary, Show)
+
+data Promise = PromiseOk TicketId Command ProcessId | PromiseNotOk TicketId
     deriving (Generic, Typeable, Binary, Show)--, Eq, Ord)
 
-instance Eq PromiseOk where
-    (==) (PromiseOk a _ _) (PromiseOk b _ _) = (==) a b
+instance Eq Promise where
+    (==) (PromiseOk a b c) (PromiseOk a' b' c') = a==a' && b==b' && c==c'
+    (==)  PromiseOk{}      (PromiseNotOk _)     = False
+    (==) (PromiseNotOk _)   PromiseOk{}         = False
+    (==) (PromiseNotOk a)  (PromiseNotOk a')    = a==a'
 
-instance Ord PromiseOk where
-    compare (PromiseOk a _ _) (PromiseOk b _ _) = compare a b
-
--- The promise-not-ok message is mentioned in the second
--- remark as a negative message the acceptor can send to the
--- proposer in the case it cannot make a promise.
-data PromiseNotOk = PromiseNotOk
-    deriving (Generic, Typeable, Binary, Show)
+instance Ord Promise where
+    compare (PromiseOk    a _ _) (PromiseOk    a' _ _) = compare a a'
+    compare (PromiseNotOk a    ) (PromiseNotOk a'    ) = compare a a'
+    compare                   _                     _  = error
+        "You must not compare PromiseOk with PromiseNotOk"
 
 -- The propose message is the one sent by the proposer
 -- to the acceptors in line 12.
@@ -78,3 +93,8 @@ masterSay msg = say $ "master   : " ++ msg
 -- is logging.
 acceptorSay :: String -> Process ()
 acceptorSay msg = say $ "acceptor : " ++ msg
+
+-- | Helper function for declaring that a proposer
+-- is logging.
+proposerSay :: String -> Process ()
+proposerSay msg = say $ "proposer : " ++ msg

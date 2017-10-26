@@ -30,12 +30,15 @@ servePrepare ServerInfo{..} (Prepare t proposerPid) = do
     cmd    <- liftIO $ readIORef    cmdRef
     tStore <- liftIO $ readIORef tStoreRef
 
-    when (t > tMax) $ do
+    if t > tMax then do
         -- T_max = t (line 4)
         liftIO $ writeIORef tMaxRef t
         -- answer with ok(T_store, C) (line 5)
         self <- getSelfPid
         send proposerPid $ PromiseOk tStore cmd self
+    else
+        -- send negative answer
+        send proposerPid $ PromiseNotOk tMax
 
 -- | Acceptor serving a phase-2 client.
 servePropose :: ServerInfo -> Propose -> Process ()
