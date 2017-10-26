@@ -6,21 +6,13 @@ import Messages
 
 import Control.Concurrent (threadDelay)
 import Control.Distributed.Process (
-    say, match, send, liftIO, receiveWait, getSelfPid,
-    spawnLocal, receiveTimeout, expectTimeout, kill,
-    Process, ProcessId
+    match, send, liftIO, getSelfPid, spawnLocal,
+    receiveTimeout, kill, Process, ProcessId
     )
 import Control.Monad (forM_, replicateM)
 import Data.Maybe (isJust, catMaybes)
-import System.Random
+import System.Random (randomRIO)
 
--- data ServerInfo =
---     ServerInfo
---         { masterPid :: ProcessId
---         , tMaxRef   :: IORef TicketId
---         , cmdRef    :: IORef Command
---         , tStoreRef :: IORef TicketId
---         }
 
 isPromiseOk :: Promise -> Bool
 isPromiseOk PromiseOk{} =  True
@@ -31,26 +23,25 @@ splitOkNotOk list =
     let list' = catMaybes list in
         (filter isPromiseOk list', filter (not.isPromiseOk) list')
 
+isProposalSuccess :: Proposal -> Bool
+isProposalSuccess ProposalSuccess =  True
+isProposalSuccess               _ = False
+
+catProposalSuccess :: [Maybe Proposal] -> [Proposal]
+catProposalSuccess list =
+    let list' = catMaybes list in
+        filter isProposalSuccess list'
+
 -- | Sends 'Prepare' to every acceptor.
 sendPrepare :: TicketId -> ProcessId -> [ProcessId] -> Process ()
 sendPrepare t proposerPid list =
     forM_ list $ flip send (Prepare t proposerPid)
 
--- receivePromiseOk :: PromiseOk -> Process (Maybe PromiseOk)
--- receivePromiseOK _ =
--- --     liftIO $ putStrLn "---i am in"
--- --     replicateM (3-1) (expectTimeout 1000 :: Process (Maybe PromiseOk))
-
--- receivePromiseNotOk :: PromiseNotOk -> Process TicketId
--- receivePromiseNotOk (PromiseNotOk t) = undefined
-
 receivePromise :: Promise -> Process Promise
 receivePromise = return
 
--- receivePhase1 :: Int -> [Promise] -> [Promise]
--- receivePhase1 0 = Right
--- receivePhase1 n list = do
---     receiveWait [ match receivePromise ]
+receiveProposal :: Proposal -> Process Proposal
+receiveProposal = return
 
 -- | Proposer ...
 propose :: [ProcessId] -> Command -> TicketId -> Process ()
@@ -59,7 +50,7 @@ propose serverPids cmd t = do
     self <- getSelfPid
     -- Phase 1
     -- "wait some time before consecutive attempts"
-    delay <- liftIO $ randomRIO (100000, 2*second) --11000 to see more negative answers
+    delay <- liftIO $ randomRIO (100000, 2*second) --110000 to see more negative answers
     liftIO $ threadDelay delay
     let t' = t+1
     -- send Prepare
@@ -78,8 +69,8 @@ propose serverPids cmd t = do
             [] -> propose serverPids cmd t'
             _  -> let PromiseNotOk t'' = maximum listNotOk in
                 do
-                    -- liftIO $ print listNotOk
-                    proposerSay $ "Received NotOk. Changing t :" ++ show t' ++ " -> " ++ show (t''+1)
+                    proposerSay $ "Received 'PromiseNotOk'. Changing t: " ++
+                        show t' ++ " -> " ++ show (t''+1)
                     propose serverPids cmd t''
     else do
         -- Phase 2
@@ -88,8 +79,8 @@ propose serverPids cmd t = do
         let pidsListOk = map (\(PromiseOk _ _ pid) -> pid) listOk
         forM_ pidsListOk $ flip send $ Propose t' cmd' self
 
-        ans <- replicateM a (expectTimeout second :: Process (Maybe ProposalSuccess))
-        if length (filter isJust ans) < a `div` 2 + 1 then
+        ans <- replicateM a (receiveTimeout second [ match receiveProposal ])
+        if length (catProposalSuccess ans) < a `div` 2 + 1 then
             propose serverPids cmd t'
         else
             forM_ serverPids $ flip send $ Execute cmd'

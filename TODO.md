@@ -9,10 +9,10 @@ There are the following types of messages:
 
 - `prepare`             [OK]
 - `promise-ok`          [OK]
-- `promise-not-ok`      [  ]
+- `promise-not-ok`      [OK]
 - `propose`             [OK]
 - `proposal-success`    [OK]
-- `proposal-failure`    [  ]
+- `proposal-failure`    [OK]
 - `execute`             [OK]
 - `executed`            [OK]
 
@@ -46,6 +46,6 @@ crashed), it will wait forever.                             [OK]
 
 You should define a version of the algorithm that works
 with timeouts but without negative responses, and one       [OK]
-that in addition works with timeouts and negative responses.[  ]
+that in addition works with timeouts and negative responses.[OK]
 In the latter, due to the reliability of a local network,
-you'll probably never hit the timeouts though.              [  ]
+you'll probably never hit the timeouts though.              [OK]

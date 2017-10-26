@@ -46,12 +46,15 @@ servePropose ServerInfo{..} (Propose t cmd' proposerPid) = do
 
     tMax   <- liftIO $ readIORef   tMaxRef
 
-    when (t == tMax) $ do
+    if t == tMax then do
         -- C=c & T_store=t (lines 15, 16)
         liftIO $ writeIORef    cmdRef cmd'
         liftIO $ writeIORef tStoreRef   t
         -- answer with success (line 17)
         send proposerPid ProposalSuccess
+    else do
+        acceptorSay "Sent 'ProposalFailure' "
+        send proposerPid ProposalFailure
 
 -- | Acceptor serving an 'Execute' message.
 serveExecute :: ServerInfo -> Execute -> Process ()

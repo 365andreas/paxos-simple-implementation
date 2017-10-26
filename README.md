@@ -10,6 +10,8 @@ In order to build the project you must first run:
 
 ## **Paxos implementation in Cloud Haskell**
 
+Paxos implementation according to 'The Science of the Blockchain' book.
+
 In order to execute the program you must run:
 
 ```
