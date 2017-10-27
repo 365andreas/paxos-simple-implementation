@@ -14,9 +14,7 @@ Paxos implementation according to 'The Science of the Blockchain' book.
 
 In order to execute the program you must run:
 
-```
-./stack exec paxos a p
-```
-where
-a : number of acceptors
-p : number of proposers
+``` ./stack exec paxos a p ``` , <br>
+where <br>
+&nbsp;&nbsp;  a : number of acceptors <br>
+&nbsp;&nbsp;  p : number of proposers
