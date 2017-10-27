@@ -53,7 +53,7 @@ propose serverPids cmd t = do
 
     self <- getSelfPid
     -- Phase 1
-    -- "wait some time before consecutive attempts"
+    -- "wait some time before consecutive attempts 100ms - 2s"
     delay <- liftIO $ randomRIO (100000, 2*second) --110000 to see more negative answers
     liftIO $ threadDelay delay
     let t' = t+1
