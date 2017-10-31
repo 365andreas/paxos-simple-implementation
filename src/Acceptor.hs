@@ -35,10 +35,10 @@ servePrepare ServerInfo{..} (Prepare t proposerPid) = do
         liftIO $ writeIORef tMaxRef t
         -- answer with ok(T_store, C) (line 5)
         self <- getSelfPid
-        send proposerPid $ PromiseOk tStore cmd self
+        send proposerPid $ PromiseOk tStore cmd self t
     else
         -- send negative answer to proposer
-        send proposerPid $ PromiseNotOk tMax
+        send proposerPid $ PromiseNotOk tMax t
 
 -- | Acceptor serving a phase-2 client.
 servePropose :: ServerInfo -> Propose -> Process ()
@@ -51,10 +51,10 @@ servePropose ServerInfo{..} (Propose t cmd' proposerPid) = do
         liftIO $ writeIORef    cmdRef cmd'
         liftIO $ writeIORef tStoreRef   t
         -- answer with success (line 17)
-        send proposerPid ProposalSuccess
+        send proposerPid $ ProposalSuccess t
     else do
         acceptorSay "Sent 'ProposalFailure' "
-        send proposerPid ProposalFailure
+        send proposerPid $ ProposalFailure t
 
 -- | Acceptor serving an 'Execute' message.
 serveExecute :: ServerInfo -> Execute -> Process ()

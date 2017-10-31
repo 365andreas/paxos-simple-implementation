@@ -26,19 +26,19 @@ data Prepare = Prepare TicketId ProcessId
 -- The promise-not-ok message is mentioned in the second
 -- remark as a negative message the acceptor can send to the
 -- proposer in the case it cannot make a promise.
-data Promise = PromiseOk TicketId Command ProcessId | PromiseNotOk TicketId
+data Promise = PromiseOk TicketId Command ProcessId TicketId | PromiseNotOk TicketId TicketId
     deriving (Generic, Typeable, Binary, Show)
 
 instance Eq Promise where
-    (==) (PromiseOk a b c) (PromiseOk a' b' c') = a==a' && b==b' && c==c'
-    (==)  PromiseOk{}      (PromiseNotOk _)     = False
-    (==) (PromiseNotOk _)   PromiseOk{}         = False
-    (==) (PromiseNotOk a)  (PromiseNotOk a')    = a==a'
+    (==) (PromiseOk a b c d) (PromiseOk a' b' c' d') = a==a' && b==b' && c==c' && d==d'
+    (==)  PromiseOk{}        (PromiseNotOk _ _)      = False
+    (==) (PromiseNotOk _ _)   PromiseOk{}            = False
+    (==) (PromiseNotOk a b)    (PromiseNotOk a' b')  = a==a' && b==b'
 
 instance Ord Promise where
-    compare (PromiseOk    a _ _) (PromiseOk    a' _ _) = compare a a'
-    compare (PromiseNotOk a    ) (PromiseNotOk a'    ) = compare a a'
-    compare                   _                     _  = error
+    compare (PromiseOk    a _ _ _) (PromiseOk    a' _ _ _) = compare a a'
+    compare (PromiseNotOk a _)     (PromiseNotOk a' _)     = compare a a'
+    compare                   _                     _      = error
         "You must not compare PromiseOk with PromiseNotOk"
 
 -- | The propose message is the one sent by the proposer
@@ -51,7 +51,7 @@ data Propose = Propose TicketId Command ProcessId
 -- Once again, the proposal-failure is mentioned in the
 -- second remark as a negative message the acceptor can send
 -- to the proposer in the case it cannot accept a proposal.
-data Proposal = ProposalSuccess | ProposalFailure
+data Proposal = ProposalSuccess TicketId | ProposalFailure TicketId
     deriving (Generic, Typeable, Binary, Show)
 
 -- | The execute message is the one sent by the proposer to

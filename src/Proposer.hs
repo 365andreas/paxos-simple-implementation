@@ -8,6 +8,7 @@ import Control.Distributed.Process (
     receiveTimeout, kill, Process, ProcessId
     )
 import Control.Monad (forM_, replicateM)
+import Data.List (partition)
 import Data.Maybe (catMaybes)
 import System.Random (randomRIO)
 
@@ -16,25 +17,32 @@ isPromiseOk :: Promise -> Bool
 isPromiseOk PromiseOk{} =  True
 isPromiseOk           _ = False
 
+-- | Rejects messages that do not refer to the right
+-- 'TicketId'
+isRelevant :: TicketId -> Promise -> Bool
+isRelevant tCurrent (PromiseOk    _ _ _ t) = tCurrent == t
+isRelevant tCurrent (PromiseNotOk _ t)     = tCurrent == t
+
 -- | Splits a 'Maybe' 'Promise' list to two lists, from
 -- which the first contains 'PromiseOk' messages and the
 -- second 'PromiseNotOk' messages.
-splitOkNotOk :: [Maybe Promise] -> ([Promise], [Promise])
-splitOkNotOk list =
-    let list' = catMaybes list in
-        (filter isPromiseOk list', filter (not.isPromiseOk) list')
+splitOkNotOk :: TicketId -> [Maybe Promise] -> ([Promise], [Promise])
+splitOkNotOk tCurrent list =
+    let list' = filter (isRelevant tCurrent) (catMaybes list) in
+        partition isPromiseOk list'
+        -- (filter isPromiseOk list', filter (not.isPromiseOk) list')
 
-isProposalSuccess :: Proposal -> Bool
-isProposalSuccess ProposalSuccess =  True
-isProposalSuccess               _ = False
+isProposalSuccess :: TicketId -> Proposal -> Bool
+isProposalSuccess tCurrent (ProposalSuccess t) = t == tCurrent
+isProposalSuccess        _                  _  = False
 
 -- | The 'catProposalSuccess' function takes a list of 'Maybe'
 -- 'Proposal's and returns a list of all the 'Just'
--- 'ProposalSuccess' values.
-catProposalSuccess :: [Maybe Proposal] -> [Proposal]
-catProposalSuccess list =
+-- 'ProposalSuccess' values for the specified 'TicketId'.
+catProposalSuccess :: [Maybe Proposal] -> TicketId -> [Proposal]
+catProposalSuccess list t =
     let list' = catMaybes list in
-        filter isProposalSuccess list'
+        filter (isProposalSuccess t) list'
 
 -- | Sends 'Prepare' to every acceptor.
 sendPrepare :: TicketId -> ProcessId -> [ProcessId] -> Process ()
@@ -62,27 +70,27 @@ propose serverPids cmd t = do
 
     let a = length serverPids
     answers <- replicateM a (receiveTimeout second [ match receivePromise ])
-    let (listOk, listNotOk) = splitOkNotOk answers
+    let (listOk, listNotOk) = splitOkNotOk t' answers
 
     kill senderPid "Receiving is over"
 
     if length listOk < a `div` 2 + 1 then
         case listNotOk of
             [] -> propose serverPids cmd t'
-            _  -> let PromiseNotOk t'' = maximum listNotOk in
+            _  -> let PromiseNotOk t'' _ = maximum listNotOk in
                 do
                     proposerSay $ "Received 'PromiseNotOk'. Changing t: " ++
                         show t' ++ " -> " ++ show (t''+1)
                     propose serverPids cmd t''
     else do
         -- Phase 2
-        let (PromiseOk tStore c _) = maximum listOk
+        let (PromiseOk tStore c _ _) = maximum listOk
         let cmd' = if tStore > 0 then c else cmd
-        let pidsListOk = map (\(PromiseOk _ _ pid) -> pid) listOk
+        let pidsListOk = map (\(PromiseOk _ _ pid _) -> pid) listOk
         forM_ pidsListOk $ flip send $ Propose t' cmd' self
 
         ans <- replicateM a (receiveTimeout second [ match receiveProposal ])
-        if length (catProposalSuccess ans) < a `div` 2 + 1 then
+        if length (catProposalSuccess ans t') < a `div` 2 + 1 then
             propose serverPids cmd t'
         else
             forM_ serverPids $ flip send $ Execute cmd'
